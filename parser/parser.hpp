@@ -8,7 +8,10 @@
 #include <vector>
 
 using Value = std::variant<int, float, std::string>;
+
 struct Node;
+struct Expression;
+
 struct StructDeclNode {
   std::string name;
 };
@@ -31,9 +34,32 @@ struct ShaderDeclNode {
   std::string type;
   std::string src;
 };
+
+struct BinaryExprNode {
+  std::shared_ptr<Expression> left;
+  std::string op;
+  std::shared_ptr<Expression> right;
+};
+
+struct NumberExprNode {
+  float value;
+};
+
+struct StringExprNode {
+  std::string value;
+};
+struct IdentExprNode {
+  std::string name;
+};
+
+struct Expression {
+  std::variant<NumberExprNode, IdentExprNode, BinaryExprNode, StringExprNode>
+      value;
+};
+
 struct VarDeclNode {
   std::string name;
-  Value value;
+  Expression value;
 };
 
 struct Node {
@@ -99,6 +125,9 @@ public:
   //@returns The structure ShaderDeclNode containing the node already made.
   ShaderDeclNode parse_ShaderDecl();
 
+  Expression parse_expression();
+  Expression parse_term();
+  Expression parse_primary();
   //@brief Picks up an Token t and returns the value string.
   //@param t The token, where Token is the class Token from the lexer.
   std::string save_token_value(Token t);

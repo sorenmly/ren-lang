@@ -84,20 +84,29 @@ public:
   //@returns The current character in char.
   char now();
 
-  //@brief Used in lexer to read a correctly read a number. Not mean't for
+  //@brief Used in lexer to correctly read a number. Not mean't for
   // further use.
   //@returns Token structure containing the full token.
   Token read_number();
 
-  //@brief Used in lexer to read a correctly read a alphanumeric glyph. Not
+  //@brief Used in lexer to correctly read a alphanumeric glyph. Not
   // mean't for further use.
   //@returns Token structure containing the full token.
   Token read_alpha();
 
-  //@brief Used in lexer to read a correctly read a string. Not mean't for
+  //@brief Used in lexer to correctly read a string. Not mean't for
   // further use.
   //@returns Token structure containing the full token.
   Token read_strings();
+
+  //@brief Used i lexer to correctly read comments. Not mean't for further use
+  //@returns Token structure containing the full token.
+  void read_comments();
+
+  //@brief Used in lexer to correctly read a division. Not mean't for
+  // further use.
+  //@returns Token structure containing the full token.
+  Token read_division();
 
   //@brief Prints the tokens gathered from the lexer_process() function.
   //@param l A vector of tokens usually gattered with lexer_process().

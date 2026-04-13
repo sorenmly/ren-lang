@@ -35,6 +35,7 @@ int main() {
   interp.execute(nodes);
 
   for (auto &[key, val] : interp.get_node_map()) {
+    Value result = interp.evaluate(val);
     std::string val_str;
     std::visit(
         [&val_str](auto &&v) {
@@ -44,9 +45,9 @@ int main() {
           else
             val_str = std::to_string(v);
         },
-        val);
+        result);
     Logger::log(Logger::INFO, Logger::INTERPRETER,
-                "\033[40mvarDecl\033[0m " + key + " = " + val_str);
+                "varDecl " + key + " = " + val_str);
   }
   return 0;
 }

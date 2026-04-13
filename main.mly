@@ -1,7 +1,8 @@
 var x = 20
-var a = "ola"
 
-*
+// qualquer coisa
+var a = 20 + x
+var b = 20 + 49
 
 scene s {
   animate {

@@ -98,6 +98,54 @@ AnimateDeclNode Parser::parse_AnimateDecl() {
 
   return AnimateDeclNode{p};
 }
+
+Expression Parser::parse_primary() {
+  if (now().type == TOKEN_TYPES::NUMBER) {
+    float val = std::stof(now().value);
+    advance();
+    return Expression{NumberExprNode{val}};
+  } else if (now().type == TOKEN_TYPES::IDENT) {
+    std::string name = now().value;
+    advance();
+    return Expression{IdentExprNode{name}};
+  } else if (now().type == TOKEN_TYPES::STRING) {
+    std::string val = now().value;
+    advance();
+    return Expression{StringExprNode{val}};
+  }
+  throw std::runtime_error("expected expression at line " +
+                           std::to_string(now().line));
+}
+
+Expression Parser::parse_term() {
+  Expression left = parse_primary();
+
+  while (now().type == TOKEN_TYPES::OPERATOR &&
+         (now().value == "*" || now().value == "/")) {
+    std::string op = now().value;
+    advance();
+    Expression right = parse_primary();
+    left = Expression{BinaryExprNode{std::make_shared<Expression>(left), op,
+                                     std::make_shared<Expression>(right)}};
+  }
+
+  return left;
+}
+
+Expression Parser::parse_expression() {
+  Expression left = parse_term();
+
+  while (now().type == TOKEN_TYPES::OPERATOR &&
+         (now().value == "+" || now().value == "-")) {
+    std::string op = now().value;
+    advance();
+    Expression right = parse_term();
+    left = Expression{BinaryExprNode{std::make_shared<Expression>(left), op,
+                                     std::make_shared<Expression>(right)}};
+  }
+
+  return left;
+}
 /* declaration of parser's things*/
 VarDeclNode Parser::parse_VarDecl() {
   /* starting without the "var" keyword!! */
@@ -109,25 +157,9 @@ VarDeclNode Parser::parse_VarDecl() {
   advance();
 
   advance();
-  std::variant<std::string, float> var_value;
-  switch (now().type) {
-  case TOKEN_TYPES::NUMBER:
-    var_value = std::stof(save_token_value(now()));
-    return VarDeclNode{identifier_name, std::get<float>(var_value)};
-    break;
 
-  case TOKEN_TYPES::STRING:
-    var_value = save_token_value(now());
-    return VarDeclNode{identifier_name, std::get<std::string>(var_value)};
-    break;
-
-  default:
-    throw std::runtime_error(
-        "ren >/ Invalid value in variable declaration at line " +
-        std::to_string(now().line) + " and column " +
-        std::to_string(now().column));
-    break;
-  }
+  Expression value = parse_expression();
+  return VarDeclNode{identifier_name, value};
 }
 
 SceneDeclNode Parser::parse_SceneDecl() {

@@ -47,6 +47,8 @@ std::string tok_types_to_string(TOKEN_TYPES src) {
     return "RPARENS";
   case TOKEN_TYPES::EQUAL:
     return "EQUAL";
+  case TOKEN_TYPES::OPERATOR:
+    return "OPERATOR";
   default:
     return "UNKNOWN";
   }
@@ -60,6 +62,12 @@ void Lexer::debug_tokens(std::vector<Token> l) {
                     l[i].value + "]; line, column: (" +
                     std::to_string(l[i].line) + ", " +
                     std::to_string(l[i].column) + ")");
+  }
+}
+
+void Lexer::read_comments() {
+  while (now() != '\n' && index < src.size()) {
+    advance();
   }
 }
 
@@ -91,6 +99,10 @@ Token Lexer::read_strings() {
   }
   n.append(std::string(1, now()));
   return Token{TOKEN_TYPES::STRING, n, get_line(), get_column()};
+}
+
+Token Lexer::read_division() {
+  return Token{TOKEN_TYPES::OPERATOR, "/", get_line(), get_column()};
 }
 
 Token Lexer::read_alpha() {
@@ -146,6 +158,25 @@ std::vector<Token> Lexer::lexer_process() {
     } else if (now() == '"') {
       tokens.push_back(read_strings());
 
+      advance();
+    } else if (now() == '/') {
+      if (peek() == '/') {
+        read_comments();
+      } else {
+        tokens.push_back(read_division());
+        advance();
+      }
+    } else if (now() == '+') {
+      tokens.push_back(
+          Token{TOKEN_TYPES::OPERATOR, "+", get_line(), get_column()});
+      advance();
+    } else if (now() == '-') {
+      tokens.push_back(
+          Token{TOKEN_TYPES::OPERATOR, "-", get_line(), get_column()});
+      advance();
+    } else if (now() == '*') {
+      tokens.push_back(
+          Token{TOKEN_TYPES::OPERATOR, "*", get_line(), get_column()});
       advance();
     } else {
       Logger::log(Logger::WARN, Logger::LEXER,
