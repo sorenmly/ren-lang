@@ -52,8 +52,14 @@ struct IdentExprNode {
   std::string name;
 };
 
+struct FnCallExprNode {
+  std::string name;
+  std::vector<Expression> args;
+};
+
 struct Expression {
-  std::variant<NumberExprNode, IdentExprNode, BinaryExprNode, StringExprNode>
+  std::variant<NumberExprNode, IdentExprNode, BinaryExprNode, StringExprNode,
+               FnCallExprNode>
       value;
 };
 
@@ -62,8 +68,23 @@ struct VarDeclNode {
   Expression value;
 };
 
+struct FnDeclNode {
+  std::string name;
+  std::vector<std::string> params;
+  std::vector<Node> body;
+  Expression return_expr;
+};
+
+struct IfDeclNode {
+  Expression condition;
+  std::vector<Node> then_body;
+  Expression then_expr;
+  std::vector<Node> else_body;
+  Expression else_expr;
+};
 struct Node {
-  std::variant<VarDeclNode, SceneDeclNode, ShaderDeclNode, AnimateDeclNode>
+  std::variant<VarDeclNode, SceneDeclNode, ShaderDeclNode, AnimateDeclNode,
+               FnDeclNode, IfDeclNode>
       value;
 };
 
@@ -124,6 +145,18 @@ public:
   // the "lang_constr.md".
   //@returns The structure ShaderDeclNode containing the node already made.
   ShaderDeclNode parse_ShaderDecl();
+
+  //@brief Parses function declaration.
+  //@returns The structure FnDeclNode containing the node already made.
+  FnDeclNode parse_FnDecl();
+
+  //@brief Parses the call of functions as expression.
+  //@returns The structure FnCallExprNode containing the node already made.
+  Expression parse_FnCallExprNode(std::string name);
+
+  //@brief Parses if conditionals aswell as else conditionals.
+  //@returns The structure IfDeclNode containing the node already made.
+  IfDeclNode parse_IfDeclNode();
 
   Expression parse_expression();
   Expression parse_term();

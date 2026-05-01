@@ -99,7 +99,33 @@ AnimateDeclNode Parser::parse_AnimateDecl() {
   return AnimateDeclNode{p};
 }
 
+Expression Parser::parse_FnCallExprNode(std::string name) {
+  /* ( */
+  advance();
+
+  std::vector<Expression> args;
+  while (now().type != TOKEN_TYPES::RPARENS) {
+    args.push_back(parse_expression());
+
+    if (now().type == TOKEN_TYPES::COMMA) {
+      advance();
+    }
+  }
+
+  /* ) */
+  advance();
+
+  return Expression{FnCallExprNode{name, args}};
+}
+
 Expression Parser::parse_primary() {
+
+  if (now().type == TOKEN_TYPES::OPERATOR && now().value == "-") {
+    advance();
+    float val = std::stof(now().value);
+    advance();
+    return Expression{NumberExprNode{-val}};
+  }
   if (now().type == TOKEN_TYPES::NUMBER) {
     float val = std::stof(now().value);
     advance();
@@ -107,6 +133,10 @@ Expression Parser::parse_primary() {
   } else if (now().type == TOKEN_TYPES::IDENT) {
     std::string name = now().value;
     advance();
+
+    if (now().type == TOKEN_TYPES::LPARENS) {
+      return parse_FnCallExprNode(name);
+    }
     return Expression{IdentExprNode{name}};
   } else if (now().type == TOKEN_TYPES::STRING) {
     std::string val = now().value;
@@ -186,18 +216,148 @@ SceneDeclNode Parser::parse_SceneDecl() {
   advance();
   return SceneDeclNode{identifier_name, body};
 }
+
+FnDeclNode Parser::parse_FnDecl() {
+
+  /* fn keyword */
+  advance();
+
+  std::string func_name = save_token_value(now());
+
+  /* name */
+  advance();
+
+  /* first param or ) */
+  advance();
+  std::vector<std::string> params;
+  while (now().type != TOKEN_TYPES::RPARENS) {
+    if (now().type == TOKEN_TYPES::IDENT) {
+      params.push_back(now().value);
+    }
+    advance();
+  }
+
+  /* ) */
+  advance();
+
+  /* {... body */
+  std::vector<Node> body;
+
+  /* lil fallback to 0 */
+  Expression return_expr{NumberExprNode{0.0f}};
+
+  while (now().type != TOKEN_TYPES::RBRACE) {
+    if (compare_declaration(TOKEN_TYPES::KEYWORD, "var")) {
+      body.push_back(Node{parse_VarDecl()});
+    } else if (now().type == TOKEN_TYPES::IDENT &&
+               peek().type != TOKEN_TYPES::LPARENS) {
+
+      /* implicit return */
+      return_expr = parse_expression();
+    } else if (now().type == TOKEN_TYPES::IDENT &&
+               peek().type == TOKEN_TYPES::LPARENS) {
+      /* TODO: func call by statement */
+      return_expr = parse_expression();
+    } else if (compare_declaration(TOKEN_TYPES::KEYWORD, "if")) {
+      body.push_back(Node{parse_IfDeclNode()});
+    } else {
+      advance();
+    }
+  }
+
+  /* } */
+  advance();
+
+  return FnDeclNode{func_name, params, body, return_expr};
+}
+
+IfDeclNode Parser::parse_IfDeclNode() {
+  /* if keyword */
+  advance();
+  /* ( */
+  advance();
+
+  Expression conditional = parse_expression();
+
+  /* ) */
+  advance();
+  /* { */
+  advance();
+
+  std::vector<Node> then_body;
+  Expression then_expr{NumberExprNode{0.0f}};
+
+  while (now().type != TOKEN_TYPES::RBRACE) {
+    if (compare_declaration(TOKEN_TYPES::KEYWORD, "var")) {
+      then_body.push_back(Node{parse_VarDecl()});
+    } else if (compare_declaration(TOKEN_TYPES::KEYWORD, "if")) {
+      then_body.push_back(Node{parse_IfDeclNode()});
+    } else if (now().type == TOKEN_TYPES::IDENT ||
+               now().type == TOKEN_TYPES::NUMBER) {
+      then_expr = parse_expression();
+    } else {
+      advance();
+    }
+  }
+
+  /* } */
+  advance();
+
+  std::vector<Node> else_body;
+  Expression else_expr{NumberExprNode{0.0f}};
+  if (compare_declaration(TOKEN_TYPES::KEYWORD, "else")) {
+    /* else keyword */
+    advance();
+    /* { */
+    advance();
+
+    while (now().type != TOKEN_TYPES::RBRACE) {
+      if (compare_declaration(TOKEN_TYPES::KEYWORD, "var")) {
+        else_body.push_back(Node{parse_VarDecl()});
+      } else if (compare_declaration(TOKEN_TYPES::KEYWORD, "if")) {
+        else_body.push_back(Node{parse_IfDeclNode()});
+      } else if (now().type == TOKEN_TYPES::IDENT ||
+                 now().type == TOKEN_TYPES::NUMBER) {
+        else_expr = parse_expression();
+      } else {
+        advance();
+      }
+    }
+    /* } */
+    advance();
+  }
+
+  return IfDeclNode{conditional, then_body, then_expr, else_body, else_expr};
+}
+
 std::vector<Node> Parser::parse() {
   Logger::log(Logger::INFO, Logger::PARSER, "--- parse initiating ---");
   /* easier life over memory!!11!! */
   std::vector<Token> token_list = get_token_list();
 
+  /* checking all of the tokens and calling the right functions to deal with
+   * them */
   std::vector<Node> nodes;
   while (token_list.size() - 1 > (size_t)get_token_index()) {
+
+    /* if the current token is a keyword and is a "var" keyword... */
     if (compare_declaration(TOKEN_TYPES::KEYWORD, "var")) {
+
+      /* parses it with the VarDecl function and pushes into the final node
+       * vector */
       nodes.push_back(Node{parse_VarDecl()});
     } else if (compare_declaration(TOKEN_TYPES::KEYWORD, "scene")) {
+
+      /* SceneDecl is more complex, it can call other "parse" functions, like
+       * parse_TransitionDecl */
       nodes.push_back(Node{parse_SceneDecl()});
+    } else if (compare_declaration(TOKEN_TYPES::KEYWORD, "fn")) {
+
+      /* parses it with the FnDecl function and pushes into the final node
+       * vector*/
+      nodes.push_back(Node{parse_FnDecl()});
     } else {
+
       advance();
     }
 

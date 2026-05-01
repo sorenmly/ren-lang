@@ -1,12 +1,12 @@
 #include "lexer.hpp"
 #include "../util/log.hpp"
 #include <cctype>
-#include <iostream>
 #include <set>
 #include <string>
 
 std::set<std::string> KEYWORD_TYPES = {"var",  "scene", "shader", "animate",
-                                       "from", "to",    "easing"};
+                                       "from", "to",    "easing", "fn",
+                                       "if",   "else"};
 
 int Lexer::get_index() { return Lexer::index; }
 std::string Lexer::get_src() { return Lexer::src; }
@@ -49,6 +49,8 @@ std::string tok_types_to_string(TOKEN_TYPES src) {
     return "EQUAL";
   case TOKEN_TYPES::OPERATOR:
     return "OPERATOR";
+  case TOKEN_TYPES::COMMA:
+    return "COMMA";
   default:
     return "UNKNOWN";
   }
@@ -155,6 +157,18 @@ std::vector<Token> Lexer::lexer_process() {
       tokens.push_back(Token{TOKEN_TYPES::LBRACE, std::string(1, now()),
                              get_line(), get_column()});
       advance();
+    } else if (now() == '(') {
+      tokens.push_back(Token{TOKEN_TYPES::LPARENS, std::string(1, now()),
+                             get_line(), get_column()});
+      advance();
+    } else if (now() == ')') {
+      tokens.push_back(Token{TOKEN_TYPES::RPARENS, std::string(1, now()),
+                             get_line(), get_column()});
+      advance();
+    } else if (now() == ',') {
+      tokens.push_back(Token{TOKEN_TYPES::COMMA, std::string(1, now()),
+                             get_line(), get_column()});
+      advance();
     } else if (now() == '"') {
       tokens.push_back(read_strings());
 
@@ -177,6 +191,36 @@ std::vector<Token> Lexer::lexer_process() {
     } else if (now() == '*') {
       tokens.push_back(
           Token{TOKEN_TYPES::OPERATOR, "*", get_line(), get_column()});
+      advance();
+    } else if (now() == '>') {
+      if (peek() == '=') {
+        tokens.push_back(
+            Token{TOKEN_TYPES::OPERATOR, ">=", get_line(), get_column()});
+        advance();
+      } else {
+        tokens.push_back(
+            Token{TOKEN_TYPES::OPERATOR, ">", get_line(), get_column()});
+      }
+      advance();
+    } else if (now() == '<') {
+      if (peek() == '=') {
+        tokens.push_back(
+            Token{TOKEN_TYPES::OPERATOR, "<=", get_line(), get_column()});
+        advance();
+      } else {
+        tokens.push_back(
+            Token{TOKEN_TYPES::OPERATOR, "<", get_line(), get_column()});
+      }
+      advance();
+    } else if (now() == '!' && peek() == '=') {
+      tokens.push_back(
+          Token{TOKEN_TYPES::OPERATOR, "!=", get_line(), get_column()});
+      advance();
+      advance();
+    } else if (now() == '=' && peek() == '=') {
+      tokens.push_back(
+          Token{TOKEN_TYPES::OPERATOR, "==", get_line(), get_column()});
+      advance();
       advance();
     } else {
       Logger::log(Logger::WARN, Logger::LEXER,

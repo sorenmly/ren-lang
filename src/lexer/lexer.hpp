@@ -18,6 +18,7 @@ enum class TOKEN_TYPES {
   RPARENS,
   EQUAL,
   OPERATOR,
+  COMMA,
   UNKNOWN
 };
 

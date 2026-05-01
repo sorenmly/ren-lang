@@ -34,20 +34,24 @@ int main() {
   Interpreter interp;
   interp.execute(nodes);
 
+  Logger::log(Logger::INFO, Logger::INTERPRETER, "starting var dump...");
   for (auto &[key, val] : interp.get_node_map()) {
-    Value result = interp.evaluate(val);
+    Logger::log(Logger::INFO, Logger::INTERPRETER, "dumping: " + key);
     std::string val_str;
     std::visit(
         [&val_str](auto &&v) {
-          using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::string>)
-            val_str = v;
+          using VT = std::decay_t<decltype(v)>;
+          if constexpr (std::is_same_v<VT, NumberExprNode>)
+            val_str = std::to_string(v.value);
+          else if constexpr (std::is_same_v<VT, StringExprNode>)
+            val_str = v.value;
           else
-            val_str = std::to_string(v);
+            val_str = "?";
         },
-        result);
+        val.value);
     Logger::log(Logger::INFO, Logger::INTERPRETER,
                 "varDecl " + key + " = " + val_str);
   }
+  Logger::log(Logger::INFO, Logger::INTERPRETER, "dump complete!");
   return 0;
 }
